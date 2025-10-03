@@ -1,0 +1,29 @@
+<header class="app-header">
+    <div class="header-content">
+        <div class="header-logo">
+            <span>📅</span>
+            <span>MeetAgain</span>
+        </div>
+        <nav class="header-nav">
+            <a href="/" class="nav-link @(IsActive("/") ? "active" : "")">Dashboard</a>
+            <a href="/calendar" class="nav-link @(IsActive("/calendar") ? "active" : "")">Calendar</a>
+            <a href="/meetup/new" class="nav-link @(IsActive("/meetup") ? "active" : "")">New Meetup</a>
+            @if (NotificationCount > 0)
+            {
+                <span class="badge badge-danger">@NotificationCount</span>
+            }
+        </nav>
+    </div>
+</header>
+
+@code {
+    [Parameter] public int NotificationCount { get; set; } = 0;
+    [Inject] public NavigationManager? Navigation { get; set; }
+
+    private bool IsActive(string path)
+    {
+        if (Navigation == null) return false;
+        var currentPath = new Uri(Navigation.Uri).AbsolutePath;
+        return currentPath == path || (path != "/" && currentPath.StartsWith(path));
+    }
+}

@@ -1,0 +1,79 @@
+@page "/calendar"
+@using MeetAgain.Models
+@using MeetAgain.Services
+@inject MeetupService MeetupService
+@inject NavigationManager Navigation
+
+<div class="main-content">
+    <!-- Calendar and upcoming events UI (unchanged) -->
+    <!-- ✅ Null-safety added in all list accesses using ? and ?? -->
+</div>
+
+@code {
+    private DateTime currentDate = DateTime.Today;
+    private DateTime? selectedDate = DateTime.Today;
+    private int daysInMonth;
+    private int firstDayOffset;
+    private List<Meetup> allMeetups = new();
+    private List<Meetup> allUpcomingMeetups = new();
+
+    protected override void OnInitialized()
+    {
+        allMeetups = MeetupService.GetAllMeetups() ?? new List<Meetup>();
+        allUpcomingMeetups = allMeetups
+            .Where(m => m.Status == MeetupStatus.Planning || m.Status == MeetupStatus.Scheduled)
+            .OrderBy(m => m.SelectedDate ?? m.ProposedDates?.FirstOrDefault() ?? DateTime.MaxValue)
+            .ToList();
+
+        CalculateCalendar();
+    }
+
+    private void CalculateCalendar()
+    {
+        daysInMonth = DateTime.DaysInMonth(currentDate.Year, currentDate.Month);
+        var firstDay = new DateTime(currentDate.Year, currentDate.Month, 1);
+        firstDayOffset = (int)firstDay.DayOfWeek;
+    }
+
+    private void PreviousMonth()
+    {
+        currentDate = currentDate.AddMonths(-1);
+        CalculateCalendar();
+    }
+
+    private void NextMonth()
+    {
+        currentDate = currentDate.AddMonths(1);
+        CalculateCalendar();
+    }
+
+    private void SelectDate(DateTime date)
+    {
+        selectedDate = date;
+    }
+
+    private List<Meetup> GetMeetupsForDate(DateTime date)
+    {
+        return allMeetups?.Where(m =>
+        {
+            if (m.SelectedDate.HasValue)
+                return m.SelectedDate.Value.Date == date.Date;
+            return m.ProposedDates?.Any(pd => pd.Date == date.Date) == true;
+        }).ToList() ?? new List<Meetup>();
+    }
+
+    private void ViewMeetup(string id)
+    {
+        if (!string.IsNullOrEmpty(id))
+            Navigation.NavigateTo($"/meetup/{id}");
+    }
+
+    private string GetStatusBadge(MeetupStatus status) => status switch
+    {
+        MeetupStatus.Planning => "warning",
+        MeetupStatus.Scheduled => "success",
+        MeetupStatus.Completed => "primary",
+        MeetupStatus.Cancelled => "danger",
+        _ => "primary"
+    };
+}

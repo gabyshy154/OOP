@@ -1,0 +1,127 @@
+@page "/group/{GroupId}"
+@using MeetAgain.Models
+@using MeetAgain.Services
+@inject FriendService FriendService
+@inject MeetupService MeetupService
+@inject NavigationManager Navigation
+
+<div class="main-content">
+    @if (group != null)
+    {
+        <div class="card">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="avatar avatar-lg" style="background-color: @group.Color;">👥</div>
+                <div style="flex: 1;">
+                    <h1 class="card-header" style="margin-bottom: 0.25rem;">@group.Name</h1>
+                    <div class="text-muted text-sm">@group.Description</div>
+                    <div class="text-muted text-xs mt-1">Created @group.CreatedAt.ToString("MMM dd, yyyy")</div>
+                </div>
+                <button class="btn btn-primary" @onclick="CreateGroupMeetup">Create Meetup</button>
+            </div>
+
+            <div class="grid grid-cols-2 mb-4">
+                <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius-md);">
+                    <div class="text-2xl font-bold text-primary">@members.Count</div>
+                    <div class="text-sm text-muted">Members</div>
+                </div>
+                <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius-md);">
+                    <div class="text-2xl font-bold text-success">@groupMeetups.Count</div>
+                    <div class="text-sm text-muted">Group Meetups</div>
+                </div>
+            </div>
+
+            <h2 class="card-header">Members</h2>
+            <ul class="list">
+                @foreach (var member in members)
+                {
+                    <li class="list-item" @onclick="() => ViewFriend(member.Id)" style="cursor: pointer;">
+                        <div class="avatar avatar-sm">@member.Avatar</div>
+                        <div style="flex: 1;">
+                            <div class="font-semibold">@member.Name</div>
+                            <div class="text-sm text-muted">@member.Email</div>
+                        </div>
+                    </li>
+                }
+            </ul>
+
+            @if (groupMeetups.Any())
+            {
+                <h2 class="card-header mt-4">Group Meetups</h2>
+                <ul class="list">
+                    @foreach (var meetup in groupMeetups)
+                    {
+                        <li class="list-item" @onclick="() => ViewMeetup(meetup.Id)" style="cursor: pointer;">
+                            <div class="avatar">📅</div>
+                            <div style="flex: 1;">
+                                <div class="font-semibold">@meetup.Title</div>
+                                <div class="text-sm text-muted">@meetup.Description</div>
+                                <div class="text-xs text-muted mt-1">
+                                    📍 @meetup.Location • 👥 @meetup.ParticipantIds.Count participants
+                                </div>
+                            </div>
+                            <span class="badge badge-@GetStatusBadge(meetup.Status)">
+                                @meetup.Status
+                            </span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="card text-center">
+            <p class="text-muted">Group not found.</p>
+            <a href="/" class="btn btn-primary mt-3">Back to Dashboard</a>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? GroupId { get; set; }
+
+    private FriendGroup? group;
+    private List<Friend> members = new();
+    private List<Meetup> groupMeetups = new();
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(GroupId))
+        {
+            group = FriendService.GetGroupById(GroupId);
+            if (group != null)
+            {
+                members = FriendService.GetFriendsByIds(group.MemberIds);
+                var allMeetups = MeetupService.GetAllMeetups();
+                groupMeetups = allMeetups.Where(m => m.GroupId == GroupId).ToList();
+            }
+        }
+    }
+
+    private void CreateGroupMeetup()
+    {
+        Navigation.NavigateTo($"/meetup/new?groupId={GroupId}");
+    }
+
+    private void ViewFriend(string id)
+    {
+        Navigation.NavigateTo($"/friend/{id}");
+    }
+
+    private void ViewMeetup(string id)
+    {
+        Navigation.NavigateTo($"/meetup/{id}");
+    }
+
+    private string GetStatusBadge(MeetupStatus status)
+    {
+        return status switch
+        {
+            MeetupStatus.Planning => "warning",
+            MeetupStatus.Scheduled => "success",
+            MeetupStatus.Completed => "primary",
+            MeetupStatus.Cancelled => "danger",
+            _ => "primary"
+        };
+    }
+}

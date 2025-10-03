@@ -1,0 +1,125 @@
+@page "/friend/{FriendId}"
+@using MeetAgain.Models
+@using MeetAgain.Services
+@inject FriendService FriendService
+@inject MeetupService MeetupService
+@inject NavigationManager Navigation
+
+<div class="main-content">
+    @if (friend != null)
+    {
+        <div class="card">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="avatar avatar-lg">@friend.Avatar</div>
+                <div style="flex: 1;">
+                    <h1 class="card-header" style="margin-bottom: 0.25rem;">@friend.Name</h1>
+                    <div class="text-muted text-sm">@friend.Email</div>
+                    @if (!string.IsNullOrEmpty(friend.Phone))
+                    {
+                        <div class="text-muted text-sm">📞 @friend.Phone</div>
+                    }
+                </div>
+                <button class="btn btn-primary" @onclick="EditFriend">Edit</button>
+            </div>
+
+            <div class="grid grid-cols-3 mb-4">
+                <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius-md);">
+                    <div class="text-2xl font-bold text-primary">@meetupsCount</div>
+                    <div class="text-sm text-muted">Meetups</div>
+                </div>
+                <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius-md);">
+                    <div class="text-2xl font-bold text-success">@upcomingCount</div>
+                    <div class="text-sm text-muted">Upcoming</div>
+                </div>
+                <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: var(--radius-md);">
+                    <div class="text-2xl font-bold text-secondary">@groupsCount</div>
+                    <div class="text-sm text-muted">Groups</div>
+                </div>
+            </div>
+
+            <h2 class="card-header">Meetup History</h2>
+            @if (friendMeetups.Any())
+            {
+                <ul class="list">
+                    @foreach (var meetup in friendMeetups)
+                    {
+                        <li class="list-item" @onclick="() => ViewMeetup(meetup.Id)" style="cursor: pointer;">
+                            <div class="avatar">📅</div>
+                            <div style="flex: 1;">
+                                <div class="font-semibold">@meetup.Title</div>
+                                <div class="text-sm text-muted">@meetup.Description</div>
+                                <div class="text-xs text-muted mt-1">
+                                    📍 @meetup.Location • @meetup.CreatedAt.ToString("MMM dd, yyyy")
+                                </div>
+                            </div>
+                            <span class="badge badge-@GetStatusBadge(meetup.Status)">
+                                @meetup.Status
+                            </span>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <div class="text-center text-muted" style="padding: 2rem;">
+                    <p>No meetups yet.</p>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="card text-center">
+            <p class="text-muted">Friend not found.</p>
+            <a href="/" class="btn btn-primary mt-3">Back to Dashboard</a>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? FriendId { get; set; }
+
+    private Friend? friend;
+    private List<Meetup> friendMeetups = new();
+    private int meetupsCount = 0;
+    private int upcomingCount = 0;
+    private int groupsCount = 0;
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(FriendId))
+        {
+            friend = FriendService.GetFriendById(FriendId);
+            if (friend != null)
+            {
+                var allMeetups = MeetupService.GetAllMeetups();
+                friendMeetups = allMeetups.Where(m => m.ParticipantIds.Contains(FriendId)).ToList();
+                meetupsCount = friendMeetups.Count;
+                upcomingCount = friendMeetups.Count(m => m.Status == MeetupStatus.Planning || m.Status == MeetupStatus.Scheduled);
+                groupsCount = friend.GroupIds.Count;
+            }
+        }
+    }
+
+    private void EditFriend()
+    {
+        // Navigate to edit page (would need to create this)
+    }
+
+    private void ViewMeetup(string id)
+    {
+        Navigation.NavigateTo($"/meetup/{id}");
+    }
+
+    private string GetStatusBadge(MeetupStatus status)
+    {
+        return status switch
+        {
+            MeetupStatus.Planning => "warning",
+            MeetupStatus.Scheduled => "success",
+            MeetupStatus.Completed => "primary",
+            MeetupStatus.Cancelled => "danger",
+            _ => "primary"
+        };
+    }
+}

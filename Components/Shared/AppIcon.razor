@@ -1,0 +1,10 @@
+@code {
+    [Parameter] public string Name { get; set; } = "help";   // icon name
+    [Parameter] public int Size { get; set; } = 24;          // px size
+    [Parameter] public string Color { get; set; } = "#000";  // hex color
+}
+
+<!-- Using Google Material Icons -->
+<span class="material-icons" style="font-size:@($"{Size}px"); color:@Color;">
+    @Name
+</span>

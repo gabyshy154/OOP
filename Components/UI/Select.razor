@@ -1,0 +1,36 @@
+<div class="form-group">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <label class="form-label">@Label</label>
+    }
+    <select class="form-select @CssClass" @onchange="HandleChange">
+        <option value="">@Placeholder</option>
+        @foreach (var option in Options)
+        {
+            <option value="@option.Value" selected="@(option.Value == SelectedValue)">
+                @option.Text
+            </option>
+        }
+    </select>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Placeholder { get; set; } = "Select an option";
+    [Parameter] public List<SelectOption> Options { get; set; } = new();
+    [Parameter] public string SelectedValue { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> SelectedValueChanged { get; set; }
+    [Parameter] public string CssClass { get; set; } = string.Empty;
+
+    private async Task HandleChange(ChangeEventArgs e)
+    {
+        SelectedValue = e.Value?.ToString() ?? string.Empty;
+        await SelectedValueChanged.InvokeAsync(SelectedValue);
+    }
+
+    public class SelectOption
+    {
+        public string Value { get; set; } = string.Empty;
+        public string Text { get; set; } = string.Empty;
+    }
+}

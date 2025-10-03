@@ -1,0 +1,21 @@
+<div class="form-checkbox">
+    <input 
+        type="checkbox" 
+        id="@Id"
+        checked="@Checked"
+        @onchange="HandleChange" />
+    <label for="@Id">@Label</label>
+</div>
+
+@code {
+    [Parameter] public string Id { get; set; } = Guid.NewGuid().ToString();
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public bool Checked { get; set; } = false;
+    [Parameter] public EventCallback<bool> CheckedChanged { get; set; }
+
+    private async Task HandleChange(ChangeEventArgs e)
+    {
+        Checked = (bool)(e.Value ?? false);
+        await CheckedChanged.InvokeAsync(Checked);
+    }
+}

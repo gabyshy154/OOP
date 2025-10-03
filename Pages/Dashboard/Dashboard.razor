@@ -1,0 +1,139 @@
+@* Pages/Dashboard/Dashboard.razor *@
+@page "/"
+@using MeetAgain.Models
+@using MeetAgain.Services
+@inject FriendService FriendService
+@inject MeetupService MeetupService
+@inject NavigationManager Navigation
+
+<div class="main-content">
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="card-header">Dashboard</h1>
+        <button class="btn btn-primary" @onclick="CreateNewMeetup">
+            ➕ New Meetup
+        </button>
+    </div>
+
+    <div class="grid grid-cols-3 mb-4">
+        <div class="card">
+            <div class="text-muted text-sm">Total Meetups</div>
+            <div class="text-2xl font-bold text-primary">@meetups.Count</div>
+        </div>
+        <div class="card">
+            <div class="text-muted text-sm">Upcoming</div>
+            <div class="text-2xl font-bold text-success">@upcomingCount</div>
+        </div>
+        <div class="card">
+            <div class="text-muted text-sm">Friends</div>
+            <div class="text-2xl font-bold text-secondary">@friends.Count</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 class="card-header">Upcoming Meetups</h2>
+        @if (upcomingMeetups?.Any() == true)
+        {
+            <ul class="list">
+                @foreach (var meetup in upcomingMeetups)
+                {
+                    <li class="list-item" @onclick="() => ViewMeetup(meetup.Id)" style="cursor: pointer;">
+                        <div class="avatar">📅</div>
+                        <div style="flex: 1;">
+                            <div class="font-semibold">@meetup.Title</div>
+                            <div class="text-sm text-muted">@meetup.Description</div>
+                            <div class="text-xs text-muted mt-1">
+                                📍 @meetup.Location • 👥 @(meetup.ParticipantIds?.Count ?? 0) participants
+                            </div>
+                        </div>
+                        <div>
+                            <span class="badge badge-@GetStatusBadge(meetup.Status)">
+                                @meetup.Status
+                            </span>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <div class="text-center text-muted" style="padding: 3rem;">
+                <div style="font-size: 3rem;">📭</div>
+                <p>No upcoming meetups. Create one to get started!</p>
+            </div>
+        }
+    </div>
+
+    <div class="grid grid-cols-2 mt-4">
+        <div class="card">
+            <h2 class="card-header">Your Friends</h2>
+            <ul class="list">
+                @foreach (var friend in friends?.Take(5) ?? Enumerable.Empty<Friend>())
+                {
+                    <li class="list-item">
+                        <div class="avatar avatar-sm">@friend.Avatar</div>
+                        <div style="flex: 1;">
+                            <div class="font-semibold text-sm">@friend.Name</div>
+                            <div class="text-xs text-muted">@friend.Email</div>
+                        </div>
+                    </li>
+                }
+            </ul>
+            @if (friends?.Count > 5)
+            {
+                <div class="text-center mt-2">
+                    <button class="btn btn-sm btn-secondary">View All (@friends.Count)</button>
+                </div>
+            }
+        </div>
+
+        <div class="card">
+            <h2 class="card-header">Friend Groups</h2>
+            <ul class="list">
+                @foreach (var group in groups ?? Enumerable.Empty<FriendGroup>())
+                {
+                    <li class="list-item" @onclick="() => ViewGroup(group.Id)" style="cursor: pointer;">
+                        <div class="avatar avatar-sm" style="background-color: @group.Color;">
+                            👥
+                        </div>
+                        <div style="flex: 1;">
+                            <div class="font-semibold text-sm">@group.Name</div>
+                            <div class="text-xs text-muted">@group.MemberIds?.Count ?? 0 members</div>
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Meetup> meetups = new();
+    private List<Meetup> upcomingMeetups = new();
+    private List<Friend> friends = new();
+    private List<FriendGroup> groups = new();
+    private int upcomingCount = 0;
+
+    protected override void OnInitialized()
+    {
+        meetups = MeetupService.GetAllMeetups() ?? new List<Meetup>();
+        upcomingMeetups = meetups.Where(m => m.Status == MeetupStatus.Planning || m.Status == MeetupStatus.Scheduled).ToList();
+        upcomingCount = upcomingMeetups.Count;
+        friends = FriendService.GetAllFriends() ?? new List<Friend>();
+        groups = FriendService.GetAllGroups() ?? new List<FriendGroup>();
+    }
+
+    private void CreateNewMeetup() => Navigation.NavigateTo("/meetup/new");
+
+    private void ViewMeetup(string id) => Navigation.NavigateTo($"/meetup/{id}");
+
+    private void ViewGroup(string id) => Navigation.NavigateTo($"/group/{id}");
+
+    private string GetStatusBadge(MeetupStatus status) => status switch
+    {
+        MeetupStatus.Planning => "warning",
+        MeetupStatus.Scheduled => "success",
+        MeetupStatus.Completed => "primary",
+        MeetupStatus.Cancelled => "danger",
+        _ => "primary"
+    };
+}

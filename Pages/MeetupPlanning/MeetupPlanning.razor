@@ -1,0 +1,134 @@
+@page "/meetup/new"
+@page "/meetup/{MeetupId}"
+
+@using MeetAgain.Models
+@using MeetAgain.Services
+@inject FriendService FriendService
+@inject MeetupService MeetupService
+@inject NotificationService NotificationService
+@inject NavigationManager Navigation
+
+@code {
+    [Parameter] public string? MeetupId { get; set; }
+
+    private Meetup meetup = new() { ProposedDates = new List<DateTime>(), ParticipantIds = new List<string>() };
+    private bool isEdit = false;
+    private List<Friend> availableFriends = new();
+    private List<FriendGroup> groups = new();
+    private List<string> selectedParticipants = new();
+    private string selectedGroupId = string.Empty;
+    private DateTime newProposedDate = DateTime.Now.AddDays(7);
+
+    protected override void OnInitialized()
+    {
+        availableFriends = FriendService.GetAllFriends() ?? new List<Friend>();
+        groups = FriendService.GetAllGroups() ?? new List<FriendGroup>();
+
+        meetup.ProposedDates ??= new List<DateTime>();
+        meetup.ParticipantIds ??= new List<string>();
+
+        if (!string.IsNullOrEmpty(MeetupId))
+        {
+            var existingMeetup = MeetupService.GetMeetupById(MeetupId);
+            if (existingMeetup != null)
+            {
+                meetup = existingMeetup;
+                meetup.ProposedDates ??= new List<DateTime>();
+                meetup.ParticipantIds ??= new List<string>();
+                selectedParticipants = meetup.ParticipantIds.ToList();
+                selectedGroupId = meetup.GroupId ?? string.Empty;
+                isEdit = true;
+            }
+        }
+    }
+
+    private void ToggleParticipant(string friendId)
+    {
+        selectedParticipants ??= new List<string>();
+        if (selectedParticipants.Contains(friendId))
+            selectedParticipants.Remove(friendId);
+        else
+            selectedParticipants.Add(friendId);
+    }
+
+    private void AddProposedDate()
+    {
+        meetup.ProposedDates ??= new List<DateTime>();
+        if (newProposedDate > DateTime.Now && !meetup.ProposedDates.Contains(newProposedDate))
+        {
+            meetup.ProposedDates.Add(newProposedDate);
+            meetup.ProposedDates = meetup.ProposedDates.OrderBy(d => d).ToList();
+            newProposedDate = newProposedDate.AddDays(1);
+        }
+    }
+
+    private void RemoveProposedDate(DateTime date)
+    {
+        meetup.ProposedDates?.Remove(date);
+    }
+
+    private bool IsValid()
+    {
+        return !string.IsNullOrWhiteSpace(meetup.Title) &&
+               !string.IsNullOrWhiteSpace(meetup.Location) &&
+               (meetup.ProposedDates?.Any() ?? false) &&
+               (selectedParticipants?.Any() ?? false);
+    }
+
+    private void SaveMeetup()
+    {
+        meetup.ParticipantIds = selectedParticipants ?? new List<string>();
+        meetup.GroupId = string.IsNullOrEmpty(selectedGroupId) ? null : selectedGroupId;
+
+        if (isEdit)
+        {
+            MeetupService.UpdateMeetup(meetup);
+            NotificationService.NotifyMeetupUpdated(meetup.Title);
+        }
+        else
+        {
+            MeetupService.AddMeetup(meetup);
+            NotificationService.NotifyMeetupCreated(meetup.Title);
+        }
+
+        Navigation.NavigateTo("/");
+    }
+
+    private void ScheduleBestDate()
+    {
+        var bestDate = MeetupService.GetBestDate(meetup.Id);
+        if (bestDate.HasValue)
+        {
+            meetup.SelectedDate = bestDate.Value;
+            meetup.Status = MeetupStatus.Scheduled;
+            MeetupService.UpdateMeetup(meetup);
+            NotificationService.NotifyMeetupScheduled(meetup.Title, bestDate.Value);
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private void Cancel() => Navigation.NavigateTo("/");
+
+    private AvailabilityStatus GetAvailability(string friendId, DateTime date)
+    {
+        var availabilities = MeetupService.GetAvailabilitiesForMeetup(meetup.Id) ?? new List<Availability>();
+        return availabilities.FirstOrDefault(a => a.FriendId == friendId && a.ProposedDate == date)?.Status 
+               ?? AvailabilityStatus.NoResponse;
+    }
+
+    private string GetAvailabilityBadge(AvailabilityStatus status) => status switch
+    {
+        AvailabilityStatus.Available => "success",
+        AvailabilityStatus.Maybe => "warning",
+        AvailabilityStatus.Unavailable => "danger",
+        _ => "primary"
+    };
+
+    private string GetAvailabilityIcon(AvailabilityStatus status) => status switch
+    {
+        AvailabilityStatus.Available => "✓",
+        AvailabilityStatus.Maybe => "?",
+        AvailabilityStatus.Unavailable => "✗",
+        _ => "—"
+    };
+}

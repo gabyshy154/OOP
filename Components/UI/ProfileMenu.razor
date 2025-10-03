@@ -1,0 +1,28 @@
+@using Microsoft.AspNetCore.Components
+
+<div class="relative">
+    <button class="flex items-center gap-2 focus:outline-none" @onclick="ToggleMenu">
+        <img src="@ProfileImage" class="w-8 h-8 rounded-full border border-white" />
+        <span class="hidden md:inline">@UserName</span>
+        <span class="material-icons">expand_more</span>
+    </button>
+
+    @if (isOpen)
+    {
+        <div class="absolute right-0 mt-2 w-40 bg-white text-gray-800 rounded-lg shadow-lg z-50">
+            <a href="/profile" class="block px-4 py-2 hover:bg-gray-100">Profile</a>
+            <a href="/settings" class="block px-4 py-2 hover:bg-gray-100">Settings</a>
+            <button class="w-full text-left px-4 py-2 hover:bg-gray-100" @onclick="OnLogout">Logout</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string UserName { get; set; } = "John";
+    [Parameter] public string ProfileImage { get; set; } = "images/no_image.png";
+    [Parameter] public EventCallback OnLogout { get; set; }
+
+    private bool isOpen;
+
+    private void ToggleMenu() => isOpen = !isOpen;
+}
