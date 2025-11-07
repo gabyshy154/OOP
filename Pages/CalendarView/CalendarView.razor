@@ -5,17 +5,281 @@
 @inject NavigationManager Navigation
 
 <div class="main-content">
-    <!-- Calendar and upcoming events UI (unchanged) -->
-    <!-- ✅ Null-safety added in all list accesses using ? and ?? -->
+    <!-- Page Header with Actions -->
+    <div class="flex justify-between items-center mb-4">
+        <div>
+            <h1 class="card-header" style="margin-bottom: 0.25rem;">Calendar</h1>
+            <p class="text-muted text-sm">View and manage all your meetups</p>
+        </div>
+        <div class="flex gap-2">
+            <button class="btn btn-secondary" @onclick="() => viewMode = ViewMode.Month">
+                📅 Month
+            </button>
+            <button class="btn btn-secondary" @onclick="() => viewMode = ViewMode.List">
+                📋 List
+            </button>
+            <button class="btn btn-primary" @onclick="CreateNewMeetup">
+                ➕ New Meetup
+            </button>
+        </div>
+    </div>
+
+    @if (viewMode == ViewMode.Month)
+    {
+        <!-- Calendar Month View -->
+        <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 1.5rem;">
+            <div class="flex justify-between items-center mb-4">
+                <button class="btn" style="background: rgba(255,255,255,0.2); color: white;" @onclick="PreviousMonth">
+                    ← Previous
+                </button>
+                <h2 style="font-size: 1.75rem; font-weight: 700; margin: 0;">
+                    @currentDate.ToString("MMMM yyyy")
+                </h2>
+                <button class="btn" style="background: rgba(255,255,255,0.2); color: white;" @onclick="NextMonth">
+                    Next →
+                </button>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-3 mb-4" style="gap: 1rem;">
+                <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: var(--radius-md); backdrop-filter: blur(10px);">
+                    <div style="font-size: 2rem; font-weight: 700;">@GetMeetupsInMonth().Count</div>
+                    <div style="font-size: 0.875rem; opacity: 0.9;">This Month</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: var(--radius-md); backdrop-filter: blur(10px);">
+                    <div style="font-size: 2rem; font-weight: 700;">@GetUpcomingMeetups().Count</div>
+                    <div style="font-size: 0.875rem; opacity: 0.9;">Upcoming</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: var(--radius-md); backdrop-filter: blur(10px);">
+                    <div style="font-size: 2rem; font-weight: 700;">@GetPendingMeetups().Count</div>
+                    <div style="font-size: 0.875rem; opacity: 0.9;">Planning</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendar Grid -->
+        <div class="card">
+            <!-- Day Headers -->
+            <div class="calendar-grid mb-2">
+                @foreach (var day in new[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" })
+                {
+                    <div class="text-center font-semibold text-muted" style="padding: 0.5rem;">@day</div>
+                }
+            </div>
+
+            <!-- Calendar Days -->
+            <div class="calendar-grid">
+                @for (int i = 0; i < firstDayOffset; i++)
+                {
+                    <div class="calendar-day disabled"></div>
+                }
+
+                @for (int day = 1; day <= daysInMonth; day++)
+                {
+                    var currentDay = day;
+                    var date = new DateTime(currentDate.Year, currentDate.Month, currentDay);
+                    var meetupsOnDay = GetMeetupsForDate(date);
+                    var isToday = date.Date == DateTime.Today;
+                    var isSelected = selectedDate.HasValue && selectedDate.Value.Date == date.Date;
+                    var hasEvents = meetupsOnDay.Any();
+                    var isWeekend = date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday;
+
+                    <div class="calendar-day @(isToday ? "today" : "") @(isSelected ? "selected" : "") @(hasEvents ? "has-events" : "")" 
+                         @onclick="() => SelectDate(date)"
+                         style="@(isWeekend ? "background: #f8f9fa;" : "") @(hasEvents ? "border: 2px solid var(--primary-color); background: rgba(99, 102, 241, 0.05);" : "") cursor: pointer; position: relative; min-height: 80px; padding: 0.5rem;">
+                        
+                        <div class="font-semibold" style="@(isToday ? "color: var(--primary-color);" : "")">
+                            @currentDay
+                        </div>
+                        
+                        @if (hasEvents)
+                        {
+                            <div style="margin-top: 0.25rem;">
+                                @foreach (var meetup in meetupsOnDay.Take(2))
+                                {
+                                    <div @onclick:stopPropagation="true" 
+                                         @onclick="() => ViewMeetup(meetup.Id)"
+                                         style="background: var(--primary-color); color: white; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.625rem; margin-bottom: 0.125rem; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                                         title="@meetup.Title">
+                                        • @meetup.Title
+                                    </div>
+                                }
+                                @if (meetupsOnDay.Count > 2)
+                                {
+                                    <div style="font-size: 0.625rem; color: var(--text-muted); margin-top: 0.125rem;">
+                                        +@(meetupsOnDay.Count - 2) more
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Selected Date Details -->
+        @if (selectedDate.HasValue)
+        {
+            var meetupsOnSelectedDate = GetMeetupsForDate(selectedDate.Value);
+            <div class="card" style="margin-top: 1.5rem; border-left: 4px solid var(--primary-color);">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="card-header" style="margin: 0;">
+                        📅 @selectedDate.Value.ToString("dddd, MMMM dd, yyyy")
+                    </h3>
+                    <button class="btn btn-sm btn-secondary" @onclick="ClearSelection">
+                        Clear
+                    </button>
+                </div>
+                
+                @if (meetupsOnSelectedDate.Any())
+                {
+                    <div style="display: grid; gap: 1rem;">
+                        @foreach (var meetup in meetupsOnSelectedDate)
+                        {
+                            <div @onclick="() => ViewMeetup(meetup.Id)" 
+                                 style="background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s ease; border: 1px solid var(--border-color);"
+                                 @onmouseover="@(() => HoverMeetup(meetup.Id))"
+                                 @onmouseout="@(() => HoverMeetup(null))">
+                                <div class="flex items-center gap-3">
+                                    <div class="avatar" style="background: @GetStatusColor(meetup.Status);">
+                                        @GetStatusIcon(meetup.Status)
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div class="font-semibold" style="font-size: 1.125rem;">@meetup.Title</div>
+                                        <div class="text-sm text-muted">@meetup.Description</div>
+                                        <div class="text-xs text-muted mt-1" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                                            <span>🕐 @GetMeetupTime(meetup)</span>
+                                            <span>📍 @meetup.Location</span>
+                                            <span>👥 @(meetup.ParticipantIds?.Count ?? 0) participants</span>
+                                        </div>
+                                    </div>
+                                    <span class="badge badge-@GetStatusBadge(meetup.Status)">
+                                        @meetup.Status
+                                    </span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted" style="padding: 2rem;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
+                        <p style="margin-bottom: 1rem;">No events scheduled for this day.</p>
+                        <button class="btn btn-primary btn-sm" @onclick="CreateNewMeetup">
+                            Create Meetup
+                        </button>
+                    </div>
+                }
+            </div>
+        }
+    }
+    else
+    {
+        <!-- List View -->
+        <div class="card">
+            <h2 class="card-header">All Upcoming Events</h2>
+            
+            <!-- Filter Buttons -->
+            <div class="flex gap-2 mb-4" style="flex-wrap: wrap;">
+                <button class="btn @(statusFilter == null ? "btn-primary" : "btn-secondary") btn-sm" 
+                        @onclick="() => statusFilter = null">
+                    All (@allUpcomingMeetups.Count)
+                </button>
+                <button class="btn @(statusFilter == MeetupStatus.Planning ? "btn-primary" : "btn-secondary") btn-sm" 
+                        @onclick="() => statusFilter = MeetupStatus.Planning">
+                    Planning (@GetPendingMeetups().Count)
+                </button>
+                <button class="btn @(statusFilter == MeetupStatus.Scheduled ? "btn-primary" : "btn-secondary") btn-sm" 
+                        @onclick="() => statusFilter = MeetupStatus.Scheduled">
+                    Scheduled (@GetScheduledMeetups().Count)
+                </button>
+            </div>
+
+            @if (GetFilteredMeetups().Any())
+            {
+                <div style="display: grid; gap: 1rem;">
+                    @foreach (var meetup in GetFilteredMeetups())
+                    {
+                        var dateToShow = meetup.SelectedDate ?? meetup.ProposedDates?.FirstOrDefault() ?? DateTime.MinValue;
+                        <div @onclick="() => ViewMeetup(meetup.Id)" 
+                             style="background: var(--bg-secondary); padding: 1.25rem; border-radius: var(--radius-lg); cursor: pointer; transition: all 0.2s ease; border: 1px solid var(--border-color);">
+                            <div class="flex items-center gap-3">
+                                <div class="avatar avatar-lg" style="background: @GetStatusColor(meetup.Status);">
+                                    @GetStatusIcon(meetup.Status)
+                                </div>
+                                <div style="flex: 1;">
+                                    <div class="font-semibold" style="font-size: 1.25rem;">@meetup.Title</div>
+                                    <div class="text-sm text-muted" style="margin-top: 0.25rem;">@meetup.Description</div>
+                                    @if (dateToShow != DateTime.MinValue)
+                                    {
+                                        <div class="text-xs text-muted mt-2" style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                                            <span style="font-weight: 500;">🕐 @dateToShow.ToString("MMM dd, yyyy hh:mm tt")</span>
+                                            <span>📍 @meetup.Location</span>
+                                            <span>👥 @(meetup.ParticipantIds?.Count ?? 0) participants</span>
+                                        </div>
+                                    }
+                                </div>
+                                <div style="text-align: right;">
+                                    <span class="badge badge-@GetStatusBadge(meetup.Status)" style="font-size: 0.875rem; padding: 0.5rem 1rem;">
+                                        @meetup.Status
+                                    </span>
+                                    <div class="text-xs text-muted mt-2">
+                                        Created @meetup.CreatedAt.ToString("MMM dd")
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center text-muted" style="padding: 3rem;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
+                    <p style="margin-bottom: 1rem;">No events found.</p>
+                    <button class="btn btn-primary" @onclick="CreateNewMeetup">
+                        Create Your First Meetup
+                    </button>
+                </div>
+            }
+        </div>
+    }
 </div>
 
+<style>
+    .calendar-day {
+        transition: all 0.2s ease;
+    }
+    
+    .calendar-day:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .calendar-day.today {
+        border: 2px solid var(--primary-color) !important;
+        font-weight: 700;
+    }
+    
+    .calendar-day.selected {
+        background: var(--primary-color) !important;
+        color: white !important;
+    }
+</style>
+
 @code {
+    private enum ViewMode { Month, List }
+    
     private DateTime currentDate = DateTime.Today;
     private DateTime? selectedDate = DateTime.Today;
     private int daysInMonth;
     private int firstDayOffset;
     private List<Meetup> allMeetups = new();
     private List<Meetup> allUpcomingMeetups = new();
+    private ViewMode viewMode = ViewMode.Month;
+    private MeetupStatus? statusFilter = null;
+    private string? hoveredMeetupId = null;
 
     protected override void OnInitialized()
     {
@@ -24,7 +288,7 @@
             .Where(m => m.Status == MeetupStatus.Planning || m.Status == MeetupStatus.Scheduled)
             .OrderBy(m => m.SelectedDate ?? m.ProposedDates?.FirstOrDefault() ?? DateTime.MaxValue)
             .ToList();
-
+        
         CalculateCalendar();
     }
 
@@ -38,12 +302,14 @@
     private void PreviousMonth()
     {
         currentDate = currentDate.AddMonths(-1);
+        selectedDate = null;
         CalculateCalendar();
     }
 
     private void NextMonth()
     {
         currentDate = currentDate.AddMonths(1);
+        selectedDate = null;
         CalculateCalendar();
     }
 
@@ -52,20 +318,73 @@
         selectedDate = date;
     }
 
+    private void ClearSelection()
+    {
+        selectedDate = null;
+    }
+
     private List<Meetup> GetMeetupsForDate(DateTime date)
     {
-        return allMeetups?.Where(m =>
+        return allMeetups.Where(m =>
         {
             if (m.SelectedDate.HasValue)
                 return m.SelectedDate.Value.Date == date.Date;
             return m.ProposedDates?.Any(pd => pd.Date == date.Date) == true;
-        }).ToList() ?? new List<Meetup>();
+        }).ToList();
+    }
+
+    private List<Meetup> GetMeetupsInMonth()
+    {
+        return allMeetups.Where(m =>
+        {
+            if (m.SelectedDate.HasValue)
+                return m.SelectedDate.Value.Year == currentDate.Year && m.SelectedDate.Value.Month == currentDate.Month;
+            return m.ProposedDates?.Any(pd => pd.Year == currentDate.Year && pd.Month == currentDate.Month) == true;
+        }).ToList();
+    }
+
+    private List<Meetup> GetUpcomingMeetups()
+    {
+        return allMeetups.Where(m => m.Status == MeetupStatus.Scheduled).ToList();
+    }
+
+    private List<Meetup> GetPendingMeetups()
+    {
+        return allMeetups.Where(m => m.Status == MeetupStatus.Planning).ToList();
+    }
+
+    private List<Meetup> GetScheduledMeetups()
+    {
+        return allMeetups.Where(m => m.Status == MeetupStatus.Scheduled).ToList();
+    }
+
+    private List<Meetup> GetFilteredMeetups()
+    {
+        var filtered = allUpcomingMeetups.AsEnumerable();
+        if (statusFilter.HasValue)
+            filtered = filtered.Where(m => m.Status == statusFilter.Value);
+        return filtered.ToList();
     }
 
     private void ViewMeetup(string id)
     {
-        if (!string.IsNullOrEmpty(id))
-            Navigation.NavigateTo($"/meetup/{id}");
+        Navigation.NavigateTo($"/meetup/{id}");
+    }
+
+    private void CreateNewMeetup()
+    {
+        Navigation.NavigateTo("/meetup/new");
+    }
+
+    private void HoverMeetup(string? id)
+    {
+        hoveredMeetupId = id;
+    }
+
+    private string GetMeetupTime(Meetup meetup)
+    {
+        var date = meetup.SelectedDate ?? meetup.ProposedDates?.FirstOrDefault();
+        return date?.ToString("hh:mm tt") ?? "TBD";
     }
 
     private string GetStatusBadge(MeetupStatus status) => status switch
@@ -75,5 +394,23 @@
         MeetupStatus.Completed => "primary",
         MeetupStatus.Cancelled => "danger",
         _ => "primary"
+    };
+
+    private string GetStatusColor(MeetupStatus status) => status switch
+    {
+        MeetupStatus.Planning => "#f59e0b",
+        MeetupStatus.Scheduled => "#10b981",
+        MeetupStatus.Completed => "#6366f1",
+        MeetupStatus.Cancelled => "#ef4444",
+        _ => "#6366f1"
+    };
+
+    private string GetStatusIcon(MeetupStatus status) => status switch
+    {
+        MeetupStatus.Planning => "📝",
+        MeetupStatus.Scheduled => "✓",
+        MeetupStatus.Completed => "✓",
+        MeetupStatus.Cancelled => "✗",
+        _ => "📅"
     };
 }

@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "MeetAgain",
   "resources": {
-    "hash": "sha256-sWxH3F18qwTyjqRrJDpwX5nWimbSrCyMHIbmAsMoh5s=",
+    "hash": "sha256-OFG/WRCmj/Z6NR2T5p0OCimH7Rq1B51mgRyg01SLhIk=",
     "fingerprinting": {
       "Azure.Core.92q6rqqhly.wasm": "Azure.Core.wasm",
       "Azure.Identity.b6ekoqlu3w.wasm": "Azure.Identity.wasm",
@@ -312,8 +312,8 @@
       "icudt_CJK.tjcz0u77k5.dat": "icudt_CJK.dat",
       "icudt_EFIGS.tptq2av103.dat": "icudt_EFIGS.dat",
       "icudt_no_CJK.lfu7j35m59.dat": "icudt_no_CJK.dat",
-      "MeetAgain.llcfdeynua.wasm": "MeetAgain.wasm",
-      "MeetAgain.k0ipz05zcg.pdb": "MeetAgain.pdb"
+      "MeetAgain.bcwd61e1i1.wasm": "MeetAgain.wasm",
+      "MeetAgain.fou3slb4ho.pdb": "MeetAgain.pdb"
     },
     "jsModuleNative": {
       "dotnet.native.9ih887ebfz.js": "sha256-oS7IRiQoVt9ThQ7Y2UM3XoeY0JqPD02cg9IvRdufn2w="
@@ -569,10 +569,10 @@
       "WindowsBase.vy2l5u79y6.wasm": "sha256-ufB9Mo5joMyUs3DzXWWBFFIZNEVrt6h9N5stYB6Oln4=",
       "mscorlib.xd6mv31d55.wasm": "sha256-1YSLR2eZt3ceALFV//vZUF2AloxVil3VlrW1zZYPSEI=",
       "netstandard.kaml52uspo.wasm": "sha256-HLEwBpLfzKw2/zGSVzHzFJxznCkt/WIjahrziiMrOpA=",
-      "MeetAgain.llcfdeynua.wasm": "sha256-dw1lDdL43xWOPBeUfRex8w+GeUj3aCLKm0/c7+EtP50="
+      "MeetAgain.bcwd61e1i1.wasm": "sha256-+27FxbdXFcVzFZopgjdGt5gRLcyBpuvSl04cBWDAgTk="
     },
     "pdb": {
-      "MeetAgain.k0ipz05zcg.pdb": "sha256-jMXy/6eXnUqhWxH7QUyX9Owq9/dkzx/V/2xB9lRKoLI="
+      "MeetAgain.fou3slb4ho.pdb": "sha256-D35f+mzdqqpaiEHnZJ8SZqGYou0wbzA+OewMG/M86Ao="
     },
     "satelliteResources": {
       "cs": {

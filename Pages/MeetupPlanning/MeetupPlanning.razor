@@ -1,12 +1,147 @@
-@page "/meetup/new"
-@page "/meetup/{MeetupId}"
 
+@page "/meetup/{MeetupId}"
 @using MeetAgain.Models
 @using MeetAgain.Services
 @inject FriendService FriendService
 @inject MeetupService MeetupService
 @inject NotificationService NotificationService
 @inject NavigationManager Navigation
+
+<div class="main-content">
+    <div class="card">
+        <h1 class="card-header">@(isEdit ? "Edit Meetup" : "Create New Meetup")</h1>
+        
+        <div class="card-body">
+            <div class="form-group">
+                <label class="form-label">Meetup Title</label>
+                <input type="text" class="form-input" @bind="meetup.Title" placeholder="e.g., Team Lunch" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea class="form-textarea" @bind="meetup.Description" placeholder="What's this meetup about?"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Location</label>
+                <input type="text" class="form-input" @bind="meetup.Location" placeholder="e.g., Central Park" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Select Friend Group (Optional)</label>
+                <select class="form-select" @bind="selectedGroupId">
+                    <option value="">-- No Group --</option>
+                    @foreach (var group in groups)
+                    {
+                        <option value="@group.Id">@group.Name (@(group.MemberIds?.Count ?? 0) members)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Select Participants</label>
+                <div class="grid grid-cols-2" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem;">
+                    @foreach (var friend in availableFriends)
+                    {
+                        <div class="form-checkbox">
+                            <input 
+                                type="checkbox" 
+                                id="friend-@friend.Id"
+                                checked="@(selectedParticipants?.Contains(friend.Id) ?? false)"
+                                @onchange="() => ToggleParticipant(friend.Id)" />
+                            <label for="friend-@friend.Id">
+                                <span class="avatar avatar-sm" style="display: inline-flex; margin-right: 0.5rem;">@friend.Avatar</span>
+                                @friend.Name
+                            </label>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Propose Dates & Times</label>
+                <div class="flex gap-2 mb-2">
+                    <input type="datetime-local" class="form-input" @bind="newProposedDate" />
+                    <button class="btn btn-secondary" @onclick="AddProposedDate">Add Date</button>
+                </div>
+                
+                @if (meetup.ProposedDates?.Any() == true)
+                {
+                    <div class="mt-2">
+                        @foreach (var date in meetup.ProposedDates)
+                        {
+                            <div class="flex items-center justify-between" style="padding: 0.5rem; background: var(--bg-secondary); border-radius: var(--radius-md); margin-bottom: 0.5rem;">
+                                <span>📅 @date.ToString("MMM dd, yyyy hh:mm tt")</span>
+                                <button class="btn btn-sm btn-danger" @onclick="() => RemoveProposedDate(date)">Remove</button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            @if ((meetup.ProposedDates?.Any() ?? false) && (selectedParticipants?.Any() ?? false))
+            {
+                <div class="form-group">
+                    <h3 class="card-header">Availability Overview</h3>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid var(--border-color);">Date</th>
+                                    @foreach (var participantId in selectedParticipants)
+                                    {
+                                        var friend = FriendService.GetFriendById(participantId);
+                                        if (friend != null)
+                                        {
+                                            <th style="padding: 0.75rem; text-align: center; border-bottom: 2px solid var(--border-color);">
+                                                <div class="avatar avatar-sm" style="margin: 0 auto;">@friend.Avatar</div>
+                                                <div class="text-xs mt-1">@friend.Name</div>
+                                            </th>
+                                        }
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var date in meetup.ProposedDates)
+                                {
+                                    <tr>
+                                        <td style="padding: 0.75rem; border-bottom: 1px solid var(--border-color);">
+                                            @date.ToString("MMM dd, yyyy hh:mm tt")
+                                        </td>
+                                        @foreach (var participantId in selectedParticipants)
+                                        {
+                                            var availability = GetAvailability(participantId, date);
+                                            <td style="padding: 0.75rem; text-align: center; border-bottom: 1px solid var(--border-color);">
+                                                <span class="badge badge-@GetAvailabilityBadge(availability)">
+                                                    @GetAvailabilityIcon(availability)
+                                                </span>
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+
+            <div class="flex gap-2 mt-4">
+                <button class="btn btn-primary" @onclick="SaveMeetup" disabled="@(!IsValid())">
+                    💾 Save Meetup
+                </button>
+                <button class="btn btn-secondary" @onclick="Cancel">
+                    Cancel
+                </button>
+                @if (isEdit && (meetup.ProposedDates?.Any() ?? false))
+                {
+                    <button class="btn btn-success" @onclick="ScheduleBestDate">
+                        ✅ Schedule Best Date
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     [Parameter] public string? MeetupId { get; set; }
