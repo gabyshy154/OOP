@@ -1,0 +1,60 @@
+@page "/friend/{FriendId}"
+@inject FriendService FriendService
+@inject MeetupService MeetupService
+@inject NavigationManager Navigation
+
+<div class="main-content">
+    @if (friend != null)
+    {
+        <h1>@friend.Name</h1>
+        <p>@friend.Email</p>
+        <p>Phone: @friend.Phone</p>
+
+        <h2>Meetup History</h2>
+        <ul>
+            @foreach (var meetup in friendMeetups)
+            {
+                <li @onclick="() => ViewMeetup(meetup.Id)" style="cursor:pointer;">
+                    @meetup.Title (@GetStatusBadge(meetup.Status))
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>Friend not found.</p>
+    }
+</div>
+
+@code {
+    [Parameter] public string? FriendId { get; set; }
+
+    private Friend? friend;
+    private List<Meetup> friendMeetups = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(FriendId))
+        {
+            friend = await FriendService.GetFriendById(FriendId);
+            if (friend != null)
+            {
+                var allMeetups = await MeetupService.GetAllMeetups();
+                friendMeetups = allMeetups
+                    .Where(m => m.ParticipantIds.Contains(FriendId))
+                    .ToList();
+            }
+        }
+    }
+
+    private void ViewMeetup(string id) => Navigation.NavigateTo($"/meetup/{id}");
+
+    private string GetStatusBadge(MeetupStatus status) => status switch
+    {
+        MeetupStatus.Planning => "warning",
+        MeetupStatus.Scheduled => "success",
+        MeetupStatus.Completed => "primary",
+        MeetupStatus.Cancelled => "danger",
+        _ => "primary"
+    };
+}

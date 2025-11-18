@@ -1,0 +1,70 @@
+@page "/group/{GroupId}"
+@inject FriendService FriendService
+@inject MeetupService MeetupService
+@inject NavigationManager Navigation
+
+<div class="main-content">
+    @if (group != null)
+    {
+        <div class="card">
+            <h1 class="card-header">@group.Name</h1>
+            <p>@group.Description</p>
+            <div>Members: @members.Count</div>
+            <div>Group Meetups: @groupMeetups.Count</div>
+        </div>
+
+        <ul>
+            @foreach (var member in members)
+            {
+                <li @onclick="() => ViewFriend(member.Id)" style="cursor:pointer;">@member.Name</li>
+            }
+        </ul>
+
+        <ul>
+            @foreach (var meetup in groupMeetups)
+            {
+                <li @onclick="() => ViewMeetup(meetup.Id)" style="cursor:pointer;">
+                    @meetup.Title (@GetStatusBadge(meetup.Status))
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <div>Group not found.</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? GroupId { get; set; }
+
+    private FriendGroup? group;
+    private List<Friend> members = new();
+    private List<Meetup> groupMeetups = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(GroupId))
+        {
+            group = await FriendService.GetGroupById(GroupId);
+            if (group != null)
+            {
+                members = await FriendService.GetFriendsByIds(group.MemberIds ?? new());
+                var allMeetups = await MeetupService.GetAllMeetups();
+                groupMeetups = allMeetups.Where(m => m.GroupId == GroupId).ToList();
+            }
+        }
+    }
+
+    private void ViewFriend(string id) => Navigation.NavigateTo($"/friend/{id}");
+    private void ViewMeetup(string id) => Navigation.NavigateTo($"/meetup/{id}");
+
+    private string GetStatusBadge(MeetupStatus status) => status switch
+    {
+        MeetupStatus.Planning => "warning",
+        MeetupStatus.Scheduled => "success",
+        MeetupStatus.Completed => "primary",
+        MeetupStatus.Cancelled => "danger",
+        _ => "primary"
+    };
+}

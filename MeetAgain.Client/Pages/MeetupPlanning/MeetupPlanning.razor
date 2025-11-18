@@ -1,0 +1,187 @@
+@page "/meetup/new"
+@page "/meetup/{MeetupId}"
+@using MeetAgain.Shared.Models
+@using MeetAgain.Client.Services
+@inject FriendService FriendService
+@inject MeetupService MeetupService
+@inject NotificationService NotificationService
+@inject NavigationManager Navigation
+
+<div class="main-content">
+    <div class="card">
+        <h1 class="card-header">@(isEdit ? "Edit Meetup" : "Create New Meetup")</h1>
+
+        <div class="card-body">
+            <div class="form-group">
+                <label class="form-label">Meetup Title</label>
+                <input type="text" class="form-input" @bind="meetup.Title" placeholder="e.g., Team Lunch" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea class="form-textarea" @bind="meetup.Description"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Location</label>
+                <input type="text" class="form-input" @bind="meetup.Location" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Select Friend Group (Optional)</label>
+                <select class="form-select" @bind="selectedGroupId">
+                    <option value="">-- No Group --</option>
+                    @foreach (var group in groups)
+                    {
+                        <option value="@group.Id">@group.Name (@(group.MemberIds?.Count ?? 0) members)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Select Participants</label>
+                <div class="grid grid-cols-2" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem;">
+                    @foreach (var friend in availableFriends)
+                    {
+                        <div class="form-checkbox">
+                            <input type="checkbox"
+                                   checked="@selectedParticipants.Contains(friend.Id)"
+                                   @onchange="() => ToggleParticipant(friend.Id)" />
+                            <label>
+                                <span class="avatar avatar-sm">@friend.Avatar</span>
+                                @friend.Name
+                            </label>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Propose Dates</label>
+                <div class="flex gap-2 mb-2">
+                    <input type="datetime-local" class="form-input" @bind="newProposedDate" />
+                    <button class="btn btn-secondary" @onclick="AddProposedDate">Add Date</button>
+                </div>
+                @if (meetup.ProposedDates.Any())
+                {
+                    foreach (var date in meetup.ProposedDates)
+                    {
+                        <div class="flex items-center justify-between">
+                            <span>@date.ToString("MMM dd yyyy hh:mm tt")</span>
+                            <button class="btn btn-danger btn-sm" @onclick="() => RemoveProposedDate(date)">Remove</button>
+                        </div>
+                    }
+                }
+            </div>
+
+            <div class="flex gap-3 mt-4">
+                <button class="btn btn-primary" @onclick="SaveMeetup" disabled="@(!IsValid())">Save Meetup</button>
+                <button class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? MeetupId { get; set; }
+
+    private Meetup meetup = new()
+    {
+        ParticipantIds = new List<string>(),
+        ProposedDates = new List<DateTime>()
+    };
+
+    private bool isEdit = false;
+    private List<Friend> availableFriends = new();
+    private List<FriendGroup> groups = new();
+    private List<string> selectedParticipants = new();
+    private string selectedGroupId = string.Empty;
+    private DateTime newProposedDate = DateTime.Now.AddDays(1);
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Always load friends and groups
+        availableFriends = await FriendService.GetAllFriendsAsync();
+        groups = await FriendService.GetAllGroupsAsync();
+
+        // ---------- NEW MEETUP ----------
+        if (string.IsNullOrEmpty(MeetupId) || MeetupId == "new")
+        {
+            isEdit = false;
+            meetup = new Meetup
+            {
+                Id = string.Empty, // new object
+                Title = string.Empty,
+                Description = string.Empty,
+                Location = string.Empty,
+                ParticipantIds = new List<string>(),
+                ProposedDates = new List<DateTime>()
+            };
+            return;
+        }
+
+        // ---------- EDIT EXISTING ----------
+        var existing = await MeetupService.GetMeetupByIdAsync(MeetupId);
+        if (existing != null)
+        {
+            meetup = existing;
+            isEdit = true;
+            selectedParticipants = meetup.ParticipantIds?.ToList() ?? new List<string>();
+            selectedGroupId = meetup.GroupId ?? string.Empty;
+        }
+    }
+
+    private void ToggleParticipant(string id)
+    {
+        if (selectedParticipants.Contains(id))
+            selectedParticipants.Remove(id);
+        else
+            selectedParticipants.Add(id);
+    }
+
+    private void AddProposedDate()
+    {
+        if (!meetup.ProposedDates.Contains(newProposedDate))
+            meetup.ProposedDates.Add(newProposedDate);
+
+        meetup.ProposedDates = meetup.ProposedDates.OrderBy(d => d).ToList();
+        newProposedDate = newProposedDate.AddDays(1);
+    }
+
+    private void RemoveProposedDate(DateTime d)
+    {
+        meetup.ProposedDates.Remove(d);
+    }
+
+    private bool IsValid()
+    {
+        return !string.IsNullOrWhiteSpace(meetup.Title)
+            && !string.IsNullOrWhiteSpace(meetup.Location)
+            && meetup.ProposedDates.Any()
+            && selectedParticipants.Any();
+    }
+
+    private async Task SaveMeetup()
+    {
+        meetup.ParticipantIds = selectedParticipants;
+        meetup.GroupId = string.IsNullOrEmpty(selectedGroupId) ? null : selectedGroupId;
+
+        if (isEdit)
+        {
+            await MeetupService.UpdateMeetupAsync(meetup);
+            NotificationService.NotifyMeetupUpdated(meetup.Title);
+        }
+        else
+        {
+            await MeetupService.AddMeetupAsync(meetup);
+            NotificationService.NotifyMeetupCreated(meetup.Title);
+        }
+
+        Navigation.NavigateTo("/");
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/");
+    }
+}

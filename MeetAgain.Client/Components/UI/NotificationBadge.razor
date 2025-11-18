@@ -1,0 +1,17 @@
+@namespace MeetAgain.Components.UI
+
+<div class="relative inline-block cursor-pointer">
+    <span class="material-icons">@Icon</span>
+
+    @if (Count > 0)
+    {
+        <span class="absolute -top-1 -right-2 bg-red-600 text-white text-xs rounded-full px-1">
+            @Count
+        </span>
+    }
+</div>
+
+@code {
+    [Parameter] public string Icon { get; set; } = "notifications";
+    [Parameter] public int Count { get; set; } = 0;
+}

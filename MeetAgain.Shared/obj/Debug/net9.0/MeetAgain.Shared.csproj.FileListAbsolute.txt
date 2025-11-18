@@ -1,0 +1,12 @@
+C:\Users\Neil\Documents\WebApp\MeetAgain\MeetAgain.Shared\bin\Debug\net9.0\MeetAgain.Shared.deps.json
+C:\Users\Neil\Documents\WebApp\MeetAgain\MeetAgain.Shared\bin\Debug\net9.0\MeetAgain.Shared.dll
+C:\Users\Neil\Documents\WebApp\MeetAgain\MeetAgain.Shared\bin\Debug\net9.0\MeetAgain.Shared.pdb
+C:\Users\Neil\Documents\WebApp\MeetAgain\MeetAgain.Shared\obj\Debug\net9.0\MeetAgain.Shared.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Neil\Documents\WebApp\MeetAgain\MeetAgain.Shared\obj\Debug\net9.0\MeetAgain.Shared.AssemblyInfoInputs.cache
+C:\Users\Neil\Documents\WebApp\MeetAgain\MeetAgain.Shared\obj\Debug\net9.0\MeetAgain.Shared.AssemblyInfo.cs
+C:\Users\Neil\Documents\WebApp\MeetAgain\MeetAgain.Shared\obj\Debug\net9.0\MeetAgain.Shared.csproj.CoreCompileInputs.cache
+C:\Users\Neil\Documents\WebApp\MeetAgain\MeetAgain.Shared\obj\Debug\net9.0\MeetAgain.Shared.sourcelink.json
+C:\Users\Neil\Documents\WebApp\MeetAgain\MeetAgain.Shared\obj\Debug\net9.0\MeetAgain.Shared.dll
+C:\Users\Neil\Documents\WebApp\MeetAgain\MeetAgain.Shared\obj\Debug\net9.0\refint\MeetAgain.Shared.dll
+C:\Users\Neil\Documents\WebApp\MeetAgain\MeetAgain.Shared\obj\Debug\net9.0\MeetAgain.Shared.pdb
+C:\Users\Neil\Documents\WebApp\MeetAgain\MeetAgain.Shared\obj\Debug\net9.0\ref\MeetAgain.Shared.dll

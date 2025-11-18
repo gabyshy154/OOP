@@ -1,0 +1,67 @@
+﻿@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components
+@using MeetAgain.Client.Services
+@using MeetAgain.Client.Layout
+@using MeetAgain.Components.UI
+
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <ErrorBoundary>
+            <ChildContent>
+                @if (isInitialized)
+                {
+                    <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+                }
+                else
+                {
+                    <div class="min-h-screen flex flex-col items-center justify-center bg-neutral-50 text-center p-6">
+                        <div class="animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent mb-4"></div>
+                        <h2 class="text-lg font-medium text-gray-700">Loading your MeetAgain data...</h2>
+                    </div>
+                }
+            </ChildContent>
+            <ErrorContent>
+                <div class="min-h-screen flex items-center justify-center bg-neutral-50 text-center p-6">
+                    <h1 class="text-2xl font-bold text-red-600 mb-2">Something went wrong</h1>
+                    <p class="text-gray-600 mb-4">An error occurred while loading this page.</p>
+                    <a href="/" class="btn btn-primary">Go to Dashboard</a>
+                </div>
+            </ErrorContent>
+        </ErrorBoundary>
+    </Found>
+
+    <NotFound>
+        <PageTitle>Not Found</PageTitle>
+        <div class="main-content">
+            <div class="card text-center">
+                <h1 class="card-header">404 - Page Not Found</h1>
+                <p class="text-muted">The page you're looking for doesn't exist.</p>
+                <a href="/" class="btn btn-primary mt-3">Go to Dashboard</a>
+            </div>
+        </div>
+    </NotFound>
+</Router>
+
+@code {
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private FriendService FriendService { get; set; } = default!;
+    [Inject] private MeetupService MeetupService { get; set; } = default!;
+
+    private bool isInitialized = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FriendService.InitializeAsync();
+        await MeetupService.InitializeAsync();
+        isInitialized = true;
+        StateHasChanged();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && Navigation.Uri.EndsWith("/home"))
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+}
